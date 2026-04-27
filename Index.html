@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>🎵 Śpiewnik</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap');
+
+  :root {
+    --bg: #0d0d12;
+    --surface: #14141e;
+    --surface2: #1c1c2e;
+    --surface3: #22223a;
+    --border: #2e2e4a;
+    --accent: #c8a96e;
+    --accent2: #9b7fd4;
+    --text: #e8e4d9;
+    --text-dim: #8a8478;
+    --text-muted: #4a4860;
+    --red: #c46060;
+    --green: #60a490;
+    --radius: 10px;
+    --font-size: 18px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Crimson Pro', Georgia, serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ─── VIEWS ─── */
+  .view { display: none; min-height: 100vh; }
+  .view.active { display: flex; flex-direction: column; }
+
+  /* ─── HEADER ─── */
+  .app-header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .app-header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.4rem;
+    color: var(--accent);
+    flex: 1;
+    letter-spacing: 0.02em;
+  }
+  .btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 7px 14px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-family: 'Crimson Pro', serif;
+    font-size: 0.95rem;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .btn:hover { background: var(--surface3); border-color: var(--accent); color: var(--accent); }
+  .btn.primary { background: var(--accent); color: #1a1408; border-color: var(--accent); font-weight: 600; }
+  .btn.primary:hover { background: #d4b97a; }
+  .btn.danger { border-color: var(--red); color: var(--red); }
+  .btn.danger:hover { background: #2a1818; }
+  .btn.icon { padding: 7px 10px; font-size: 1.1rem; }
+
+  /* ─── TOOLBAR ─── */
+  .toolbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 20px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .toolbar input[type=text] {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 7px 12px;
+    border-radius: var(--radius);
+    font-family: 'Crimson Pro', serif;
+    font-size: 1rem;
+    flex: 1; min-width: 120px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .toolbar input[type=text]:focus { border-color: var(--accent); }
+  .toolbar select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 7px 10px;
+    border-radius: var(--radius);
+    font-family: 'Crimson Pro', serif;
+    font-size: 0.95rem;
+    cursor: pointer; outline: none;
+  }
+
+  /* ─── SONG TABLE ─── */
+  .song-list-wrap { flex: 1; overflow-y: auto; padding: 16px 20px; }
+  .song-list {
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .song-row {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    display: grid;
+    grid-template-columns: 28px 1fr auto auto auto;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    cursor: pointer;
+    transition: all 0.18s;
+    user-select: none;
+  }
+  .song-row:hover { background: var(--surface2); border-color: var(--accent); }
+  .song-row .drag-handle { color: var(--text-muted); font-size: 1.1rem; cursor: grab; }
+  .song-row .song-title { font-size: 1.05rem; font-weight: 600; }
+  .song-row .song-meta { font-size: 0.82rem; color: var(--text-dim); }
+  .song-row .badge {
+    font-size: 0.75rem; background: var(--surface3);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 2px 7px; color: var(--text-dim); white-space: nowrap;
+  }
+  .song-row .badge.key { color: var(--accent); border-color: var(--accent); }
+  .song-row .badge.harp { color: var(--accent2); border-color: var(--accent2); }
+
+  /* ─── SONG VIEW ─── */
+  #song-view {
+    background: var(--bg);
+  }
+  .song-header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    position: sticky; top: 0; z-index: 100;
+    flex-wrap: wrap;
+  }
+  .song-header h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.2rem;
+    color: var(--accent);
+    flex: 1;
+  }
+  .font-controls {
+    display: flex; align-items: center; gap: 6px;
+  }
+  .font-size-display {
+    font-size: 0.85rem; color: var(--text-dim);
+    min-width: 38px; text-align: center;
+  }
+
+  .song-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 20px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .song-text {
+    font-family: 'Crimson Pro', serif;
+    font-size: var(--font-size);
+    line-height: 1.75;
+    white-space: pre-wrap;
+    word-break: break-word;
+    width: 100%;
+    color: var(--text);
+  }
+  .chord { color: var(--accent); font-weight: 700; }
+
+  /* ─── INFO BAR ─── */
+  .song-info-bar {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .info-field {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 0.9rem;
+  }
+  .info-field label { color: var(--text-dim); font-size: 0.82rem; }
+  .info-field span { color: var(--text); font-weight: 600; }
+  .like-btn {
+    background: none; border: 1px solid var(--border);
+    border-radius: 20px; padding: 4px 12px;
+    color: var(--text-dim); cursor: pointer;
+    font-size: 0.9rem; transition: all 0.2s;
+    font-family: 'Crimson Pro', serif;
+  }
+  .like-btn.liked { border-color: var(--red); color: var(--red); }
+  .like-btn:hover { border-color: var(--red); color: var(--red); }
+
+  /* CAPO SELECT */
+  .capo-wrap { position: relative; display: flex; align-items: center; gap: 6px; }
+  .capo-wrap select {
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--accent); padding: 4px 8px; border-radius: 6px;
+    font-size: 0.88rem; cursor: pointer; outline: none;
+  }
+  .capo-tooltip {
+    position: absolute; bottom: 130%; left: 50%; transform: translateX(-50%);
+    background: var(--surface3); border: 1px solid var(--border);
+    padding: 6px 10px; border-radius: 8px; font-size: 0.8rem;
+    color: var(--text-dim); white-space: nowrap; pointer-events: none;
+    opacity: 0; transition: opacity 0.2s; z-index: 10;
+  }
+  .capo-wrap:hover .capo-tooltip { opacity: 1; }
+
+  /* ─── ADD/EDIT MODAL ─── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.75); z-index: 200;
+    align-items: center; justify-content: center;
+    padding: 16px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    width: 100%; max-width: 640px;
+    max-height: 90vh;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .modal-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .modal-header h3 {
+    font-family: 'Playfair Display', serif;
+    color: var(--accent); flex: 1; font-size: 1.15rem;
+  }
+  .modal-body { padding: 16px 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group label { font-size: 0.83rem; color: var(--text-dim); }
+  .form-group input, .form-group textarea, .form-group select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 9px 12px;
+    border-radius: var(--radius);
+    font-family: 'Crimson Pro', serif;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .form-group input:focus, .form-group textarea:focus { border-color: var(--accent); }
+  .form-group textarea { min-height: 220px; resize: vertical; line-height: 1.6; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .modal-footer {
+    padding: 12px 20px;
+    border-top: 1px solid var(--border);
+    display: flex; gap: 8px; justify-content: flex-end;
+  }
+
+  /* ─── EMPTY STATE ─── */
+  .empty-state {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 16px; color: var(--text-muted); padding: 40px;
+    text-align: center;
+  }
+  .empty-state .icon { font-size: 3rem; }
+  .empty-state p { font-size: 1.05rem; }
+
+  /* ─── DRAG ─── */
+  .song-row.dragging { opacity: 0.4; }
+  .song-row.drag-over { border-color: var(--accent2); background: var(--surface3); }
+
+  /* ─── SCROLLBAR ─── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+  /* ─── TOAST ─── */
+  .toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: var(--surface3); border: 1px solid var(--border);
+    color: var(--text); padding: 10px 20px; border-radius: 20px;
+    font-size: 0.9rem; z-index: 999; opacity: 0;
+    transition: opacity 0.3s; pointer-events: none;
+  }
+  .toast.show { opacity: 1; }
+
+  /* ─── FULLSCREEN ─── */
+  .song-content.fullscreen-text {
+    font-size: calc(var(--font-size) * 1.1);
+  }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 600px) {
+    .song-row { grid-template-columns: 24px 1fr auto; }
+    .song-row .badge.key, .song-row .badge.harp { display: none; }
+    .form-row { grid-template-columns: 1fr 1fr; }
+    .song-info-bar { gap: 8px; }
+    .toolbar { padding: 8px 12px; }
+    .song-list-wrap { padding: 10px 12px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════
+     WIDOK 1: SPIS TREŚCI
+══════════════════════════════════════════════ -->
+<div id="list-view" class="view active">
+  <div class="app-header">
+    <span style="font-size:1.5rem">🎵</span>
+    <h1>Śpiewnik</h1>
+    <button class="btn primary" onclick="openAddModal()">+ Dodaj</button>
+    <button class="btn icon" onclick="exportData()" title="Eksportuj — zapisz piosenki do pliku">💾</button>
+    <button class="btn icon" onclick="document.getElementById('import-file').click()" title="Importuj — wgraj piosenki z pliku">📂</button>
+    <input type="file" id="import-file" accept=".json,.txt" style="display:none" onchange="importData(event)">
+    <button class="btn icon" onclick="showHelp()" title="Pomoc">❓</button>
+  </div>
+
+  <div class="toolbar">
+    <input type="text" id="search-input" placeholder="🔍 Szukaj tytułu lub tekstu…" oninput="renderList()">
+    <select id="sort-select" onchange="renderList()">
+      <option value="order">Kolejność</option>
+      <option value="alpha">A–Z</option>
+      <option value="likes">Polubienia ↓</option>
+      <option value="views">Wyświetlenia ↓</option>
+      <option value="key">Tonacja piosenki</option>
+      <option value="harp">Tonacja harmonijki</option>
+    </select>
+    <select id="filter-key" onchange="renderList()">
+      <option value="">Wszystkie tonacje</option>
+    </select>
+  </div>
+
+  <div class="song-list-wrap">
+    <div class="song-list" id="song-list"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     WIDOK 2: PIOSENKA
+══════════════════════════════════════════════ -->
+<div id="song-view" class="view">
+  <div class="song-header">
+    <button class="btn icon" onclick="goBack()">← Wróć</button>
+    <h2 id="view-title">—</h2>
+    <div class="font-controls">
+      <button class="btn icon" onclick="changeFont(-3)" title="Zmniejsz">A−</button>
+      <span class="font-size-display" id="font-size-label">18px</span>
+      <button class="btn icon" onclick="changeFont(3)" title="Zwiększ">A+</button>
+    </div>
+    <button class="btn icon" onclick="editCurrent()" title="Edytuj">✏️</button>
+    <button class="btn icon danger" onclick="deleteCurrent()" title="Usuń">🗑</button>
+    <button class="btn icon" onclick="toggleFullscreen()" title="Pełny ekran" id="fs-btn">⛶</button>
+  </div>
+
+  <div class="song-content" id="song-content">
+    <div class="song-text" id="song-text"></div>
+  </div>
+
+  <div class="song-info-bar" id="song-info-bar">
+    <button class="like-btn" id="like-btn" onclick="toggleLike()">♥ <span id="like-count">0</span></button>
+
+    <div class="info-field">
+      <label>Tonacja:</label>
+      <span id="info-key">—</span>
+    </div>
+
+    <div class="info-field">
+      <label>Harmonijka:</label>
+      <span id="info-harp" style="color:var(--accent2)">—</span>
+    </div>
+
+    <div class="capo-wrap">
+      <label style="font-size:0.82rem;color:var(--text-dim)">Capo:</label>
+      <select id="capo-select" onchange="saveCapo()">
+        <option value="0">Brak</option>
+        <option value="I">I</option>
+        <option value="II">II</option>
+        <option value="III">III</option>
+        <option value="IV">IV</option>
+        <option value="V">V</option>
+        <option value="VI">VI</option>
+        <option value="VII">VII</option>
+        <option value="VIII">VIII</option>
+        <option value="IX">IX</option>
+        <option value="X">X</option>
+      </select>
+      <div class="capo-tooltip">Capo — kapodaster na progi gitary.<br>Zmienia strój bez przewijania strun.</div>
+    </div>
+
+    <div class="info-field">
+      <label>Wyświetlenia:</label>
+      <span id="info-views">0</span>
+    </div>
+
+    <div class="info-field">
+      <label>Kolejność:</label>
+      <input type="number" id="info-order" style="width:55px;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:3px 7px;border-radius:6px;font-family:'Crimson Pro',serif;font-size:0.9rem" onchange="saveOrder()">
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     MODAL: DODAJ / EDYTUJ
+══════════════════════════════════════════════ -->
+<div class="modal-overlay" id="add-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-title">Dodaj piosenkę</h3>
+      <button class="btn icon" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Tytuł piosenki *</label>
+        <input type="text" id="f-title" placeholder="np. Stary wspaniały świat">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Tonacja piosenki (#T)</label>
+          <input type="text" id="f-key" placeholder="np. C, Am, G">
+        </div>
+        <div class="form-group">
+          <label>Tonacja harmonijki (#H)</label>
+          <input type="text" id="f-harp" placeholder="np. C, G, D">
+        </div>
+        <div class="form-group">
+          <label>Kolejność</label>
+          <input type="number" id="f-order" placeholder="np. 1">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Tekst piosenki</label>
+        <textarea id="f-text" placeholder="Wklej lub wpisz tekst piosenki tutaj…&#10;&#10;Akordy możesz wpisywać w nawiasach kwadratowych: [Am] [C] [G]&#10;&#10;Przykład:&#10;[Am] Pierwsza zwrotka&#10;[C] tekst tekst [G] tekst"></textarea>
+      </div>
+      <div class="form-group" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px">
+        <label style="color:var(--accent);font-size:0.8rem">💡 Format pliku tekstowego (opcjonalnie)</label>
+        <pre style="font-size:0.78rem;color:var(--text-dim);margin-top:4px;white-space:pre-wrap">#Tytuł: Nazwa Piosenki
+#T: C
+#H: G
+Tekst piosenki...</pre>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Anuluj</button>
+      <button class="btn primary" onclick="saveSong()">💾 Zapisz</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════
+//  DATA LAYER — localStorage
+// ══════════════════════════════════════════════
+const STORE_KEY = 'spiewnik_songs';
+const PREFS_KEY = 'spiewnik_prefs';
+
+function loadSongs() {
+  try { return JSON.parse(localStorage.getItem(STORE_KEY)) || []; }
+  catch { return []; }
+}
+function saveSongs(arr) {
+  localStorage.setItem(STORE_KEY, JSON.stringify(arr));
+}
+function loadPrefs() {
+  try { return JSON.parse(localStorage.getItem(PREFS_KEY)) || {}; }
+  catch { return {}; }
+}
+function savePrefs(p) {
+  localStorage.setItem(PREFS_KEY, JSON.stringify(p));
+}
+
+let songs = loadSongs();
+let prefs = loadPrefs();
+let currentId = null;
+let fontSize = prefs.fontSize || 18;
+let editingId = null;
+
+// ── Demo songs if empty ──
+if (songs.length === 0) {
+  songs = [
+    {
+      id: uid(), title: "Dom Wschodzącego Słońca",
+      key: "Am", harp: "A",
+      text: "[Am] There is a house in [C] New Orleans\n[D] They call the [F] Rising Sun\n[Am] And it's been the [C] ruin of\n[D] Many a poor [E] boy\n[Am] And God I [E] know I'm [Am] one",
+      likes: 3, views: 12, order: 1, liked: false, capo: "0"
+    },
+    {
+      id: uid(), title: "Hallelujah",
+      key: "C", harp: "C",
+      text: "[C] I've heard there was a [Am] secret chord\n[C] That David played and it [Am] pleased the Lord\n[F] But you don't really [G] care for music, [C] do you? [G]\n[C] It goes like [F] this, the [G] fourth, the [Am] fifth\n[F] The minor [G] fall, the [Am] major lift\n[G] The baffled king com[E7] posing Halle[Am] lujah\n\n[F] Hallelujah, [Am] Hallelujah\n[F] Hallelujah, [C] Halle[G] lujah",
+      likes: 7, views: 28, order: 2, liked: true, capo: "0"
+    },
+    {
+      id: uid(), title: "Knockin' on Heaven's Door",
+      key: "G", harp: "G",
+      text: "[G] Mama, take this [D] badge off of [Am] me\n[G] I can't use it [D] anymore\n[G] It's gettin' dark, [D] too dark for [Am] me to see\n[G] I feel I'm [D] knockin' on [G] heaven's door\n\n[G] Knock, knock, [D] knockin' on [Am] heaven's door\n[G] Knock, knock, [D] knockin' on [G] heaven's door",
+      likes: 5, views: 19, order: 3, liked: false, capo: "0"
+    }
+  ];
+  saveSongs(songs);
+}
+
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
+
+// ══════════════════════════════════════════════
+//  LIST VIEW
+// ══════════════════════════════════════════════
+function renderList() {
+  const q = document.getElementById('search-input').value.toLowerCase();
+  const sortBy = document.getElementById('sort-select').value;
+  const filterKey = document.getElementById('filter-key').value;
+
+  // populate key filter
+  const allKeys = [...new Set(songs.map(s => s.key).filter(Boolean))].sort();
+  const fkEl = document.getElementById('filter-key');
+  const fkVal = fkEl.value;
+  fkEl.innerHTML = '<option value="">Wszystkie tonacje</option>' +
+    allKeys.map(k => `<option value="${k}" ${k===fkVal?'selected':''}>${k}</option>`).join('');
+
+  let list = songs.filter(s => {
+    if (filterKey && s.key !== filterKey) return false;
+    if (!q) return true;
+    return s.title.toLowerCase().includes(q) || (s.text||'').toLowerCase().includes(q);
+  });
+
+  list.sort((a,b) => {
+    if (sortBy === 'alpha') return a.title.localeCompare(b.title,'pl');
+    if (sortBy === 'likes') return (b.likes||0) - (a.likes||0);
+    if (sortBy === 'views') return (b.views||0) - (a.views||0);
+    if (sortBy === 'key') return (a.key||'').localeCompare(b.key||'','pl');
+    if (sortBy === 'harp') return (a.harp||'').localeCompare(b.harp||'','pl');
+    return (a.order||999) - (b.order||999);
+  });
+
+  const el = document.getElementById('song-list');
+  if (list.length === 0) {
+    el.innerHTML = `<div class="empty-state"><div class="icon">🎵</div><p>Brak piosenek. Dodaj pierwszą!</p></div>`;
+    return;
+  }
+
+  el.innerHTML = list.map(s => `
+    <div class="song-row" draggable="true"
+      ondragstart="dragStart(event,'${s.id}')"
+      ondragover="dragOver(event)"
+      ondrop="dragDrop(event,'${s.id}')"
+      ondragleave="dragLeave(event)"
+      onclick="openSong('${s.id}')">
+      <span class="drag-handle">⠿</span>
+      <div>
+        <div class="song-title">${esc(s.title)}</div>
+        <div class="song-meta">♥ ${s.likes||0} · 👁 ${s.views||0}</div>
+      </div>
+      ${s.key ? `<span class="badge key">${esc(s.key)}</span>` : '<span></span>'}
+      ${s.harp ? `<span class="badge harp">🎵${esc(s.harp)}</span>` : '<span></span>'}
+    </div>
+  `).join('');
+}
+
+function esc(str) {
+  return (str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ══════════════════════════════════════════════
+//  SONG VIEW
+// ══════════════════════════════════════════════
+function openSong(id) {
+  const s = songs.find(x => x.id === id);
+  if (!s) return;
+  currentId = id;
+  s.views = (s.views||0) + 1;
+  saveSongs(songs);
+
+  document.getElementById('view-title').textContent = s.title;
+  document.getElementById('info-key').textContent = s.key || '—';
+  document.getElementById('info-harp').textContent = s.harp || '—';
+  document.getElementById('info-views').textContent = s.views;
+  document.getElementById('info-order').value = s.order || '';
+  document.getElementById('like-count').textContent = s.likes || 0;
+  document.getElementById('capo-select').value = s.capo || '0';
+
+  const likeBtn = document.getElementById('like-btn');
+  likeBtn.className = 'like-btn' + (s.liked ? ' liked' : '');
+
+  renderSongText(s.text || '');
+  applyFontSize();
+
+  showView('song-view');
+}
+
+function renderSongText(text) {
+  // Highlight chords in [brackets]
+  const html = esc(text).replace(/\[([^\]]+)\]/g,
+    '<span class="chord">[$1]</span>');
+  document.getElementById('song-text').innerHTML = html;
+}
+
+function goBack() {
+  showView('list-view');
+  renderList();
+}
+
+function showView(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// Font size
+function changeFont(delta) {
+  fontSize = Math.min(32, Math.max(6, fontSize + delta));
+  prefs.fontSize = fontSize;
+  savePrefs(prefs);
+  applyFontSize();
+}
+function applyFontSize() {
+  document.documentElement.style.setProperty('--font-size', fontSize + 'px');
+  document.getElementById('font-size-label').textContent = fontSize + 'px';
+}
+
+// Fullscreen
+function toggleFullscreen() {
+  const el = document.documentElement;
+  if (!document.fullscreenElement) {
+    el.requestFullscreen && el.requestFullscreen();
+  } else {
+    document.exitFullscreen && document.exitFullscreen();
+  }
+}
+
+// Like
+function toggleLike() {
+  const s = songs.find(x => x.id === currentId);
+  if (!s) return;
+  s.liked = !s.liked;
+  s.likes = (s.likes||0) + (s.liked ? 1 : -1);
+  if (s.likes < 0) s.likes = 0;
+  saveSongs(songs);
+  document.getElementById('like-count').textContent = s.likes;
+  document.getElementById('like-btn').className = 'like-btn' + (s.liked ? ' liked' : '');
+}
+
+// Capo
+function saveCapo() {
+  const s = songs.find(x => x.id === currentId);
+  if (!s) return;
+  s.capo = document.getElementById('capo-select').value;
+  saveSongs(songs);
+}
+
+// Order
+function saveOrder() {
+  const s = songs.find(x => x.id === currentId);
+  if (!s) return;
+  s.order = parseInt(document.getElementById('info-order').value) || 0;
+  saveSongs(songs);
+}
+
+// ══════════════════════════════════════════════
+//  ADD / EDIT MODAL
+// ══════════════════════════════════════════════
+function openAddModal(id) {
+  editingId = id || null;
+  document.getElementById('modal-title').textContent = id ? 'Edytuj piosenkę' : 'Dodaj piosenkę';
+
+  if (id) {
+    const s = songs.find(x => x.id === id);
+    document.getElementById('f-title').value = s.title || '';
+    document.getElementById('f-key').value = s.key || '';
+    document.getElementById('f-harp').value = s.harp || '';
+    document.getElementById('f-order').value = s.order || '';
+    document.getElementById('f-text').value = s.text || '';
+  } else {
+    document.getElementById('f-title').value = '';
+    document.getElementById('f-key').value = '';
+    document.getElementById('f-harp').value = '';
+    document.getElementById('f-order').value = songs.length + 1;
+    document.getElementById('f-text').value = '';
+  }
+  document.getElementById('add-modal').classList.add('open');
+  document.getElementById('f-title').focus();
+}
+
+function closeModal() {
+  document.getElementById('add-modal').classList.remove('open');
+}
+
+function saveSong() {
+  const title = document.getElementById('f-title').value.trim();
+  if (!title) { showToast('⚠️ Wpisz tytuł piosenki'); return; }
+
+  const data = {
+    title,
+    key: document.getElementById('f-key').value.trim(),
+    harp: document.getElementById('f-harp').value.trim(),
+    order: parseInt(document.getElementById('f-order').value) || songs.length + 1,
+    text: document.getElementById('f-text').value,
+  };
+
+  if (editingId) {
+    const idx = songs.findIndex(x => x.id === editingId);
+    songs[idx] = { ...songs[idx], ...data };
+    showToast('✅ Piosenka zaktualizowana');
+  } else {
+    songs.push({ id: uid(), likes: 0, views: 0, liked: false, capo: '0', ...data });
+    showToast('✅ Piosenka dodana');
+  }
+
+  saveSongs(songs);
+  closeModal();
+  renderList();
+
+  if (editingId && currentId === editingId) {
+    openSong(editingId);
+  }
+}
+
+function editCurrent() {
+  openAddModal(currentId);
+}
+
+function deleteCurrent() {
+  const s = songs.find(x => x.id === currentId);
+  if (!s) return;
+  if (!confirm(`Usunąć "${s.title}"? Tej operacji nie można cofnąć.`)) return;
+  songs = songs.filter(x => x.id !== currentId);
+  saveSongs(songs);
+  showToast('🗑 Piosenka usunięta');
+  goBack();
+}
+
+// ══════════════════════════════════════════════
+//  DRAG & DROP
+// ══════════════════════════════════════════════
+let dragId = null;
+
+function dragStart(e, id) {
+  dragId = id;
+  e.currentTarget.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+}
+function dragOver(e) {
+  e.preventDefault();
+  e.currentTarget.classList.add('drag-over');
+}
+function dragLeave(e) {
+  e.currentTarget.classList.remove('drag-over');
+}
+function dragDrop(e, targetId) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  if (dragId === targetId) return;
+  const fromIdx = songs.findIndex(x => x.id === dragId);
+  const toIdx = songs.findIndex(x => x.id === targetId);
+  const [moved] = songs.splice(fromIdx, 1);
+  songs.splice(toIdx, 0, moved);
+  songs.forEach((s, i) => s.order = i + 1);
+  saveSongs(songs);
+  renderList();
+}
+
+// ══════════════════════════════════════════════
+//  EKSPORT — zapisz piosenki do pliku .json
+// ══════════════════════════════════════════════
+function exportData() {
+  const payload = {
+    _app: 'Spiewnik',
+    _version: 1,
+    _exported: new Date().toISOString(),
+    songs: songs,
+    prefs: prefs
+  };
+  const json = JSON.stringify(payload, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const date = new Date().toISOString().slice(0,10);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `spiewnik_${date}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast(`💾 Zapisano ${songs.length} piosenek do pliku`);
+}
+
+// ══════════════════════════════════════════════
+//  IMPORT — wgraj piosenki z pliku .json lub .txt
+// ══════════════════════════════════════════════
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const text = e.target.result;
+
+    // ── Format JSON (eksport z tej aplikacji) ──
+    if (file.name.endsWith('.json')) {
+      try {
+        const data = JSON.parse(text);
+        const imported = data.songs || data; // obsługa obu formatów
+        if (!Array.isArray(imported)) throw new Error('Nieprawidłowy format');
+
+        const mode = confirm(
+          `Znaleziono ${imported.length} piosenek.\n\n` +
+          `OK = Zastąp wszystkie obecne piosenki\n` +
+          `Anuluj = Dodaj do istniejących (bez duplikatów)`
+        );
+
+        if (mode) {
+          // Zastąp całkowicie
+          songs = imported.map(s => ({ ...s, id: s.id || uid() }));
+          if (data.prefs) {
+            prefs = { ...prefs, ...data.prefs };
+            savePrefs(prefs);
+            fontSize = prefs.fontSize || 18;
+            applyFontSize();
+          }
+        } else {
+          // Scalaj — pomijaj piosenki o tym samym tytule
+          const existingTitles = new Set(songs.map(s => s.title.toLowerCase()));
+          let added = 0;
+          for (const s of imported) {
+            if (!existingTitles.has((s.title||'').toLowerCase())) {
+              songs.push({ ...s, id: uid() });
+              added++;
+            }
+          }
+          showToast(`✅ Dodano ${added} nowych piosenek`);
+          saveSongs(songs);
+          renderList();
+          event.target.value = '';
+          return;
+        }
+
+        saveSongs(songs);
+        renderList();
+        showToast(`✅ Wgrano ${imported.length} piosenek`);
+
+      } catch(err) {
+        showToast('❌ Błąd pliku JSON: ' + err.message);
+      }
+
+    // ── Format TXT (jeden plik = jedna piosenka) ──
+    } else if (file.name.endsWith('.txt')) {
+      try {
+        const s = parseTxtSong(text, file.name);
+        const exists = songs.find(x => x.title.toLowerCase() === s.title.toLowerCase());
+        if (exists) {
+          if (!confirm(`Piosenka "${s.title}" już istnieje. Zastąpić?`)) {
+            event.target.value = '';
+            return;
+          }
+          Object.assign(exists, s);
+        } else {
+          songs.push(s);
+        }
+        saveSongs(songs);
+        renderList();
+        showToast(`✅ Wgrano: ${s.title}`);
+      } catch(err) {
+        showToast('❌ Błąd pliku TXT: ' + err.message);
+      }
+    }
+
+    event.target.value = '';
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+// Parsowanie pojedynczego pliku .txt
+function parseTxtSong(text, filename) {
+  const lines = text.split('\n');
+  let title = filename.replace(/\.txt$/i,'');
+  let key = '', harp = '';
+  const bodyLines = [];
+
+  for (const line of lines) {
+    const t = line.trim();
+    if (t.startsWith('#Tytuł:') || t.startsWith('#Tytul:')) {
+      title = t.replace(/^#Tytu[łl]:/i,'').trim();
+    } else if (t.startsWith('#T:')) {
+      key = t.replace(/^#T:/,'').trim();
+    } else if (t.startsWith('#H:')) {
+      harp = t.replace(/^#H:/,'').trim();
+    } else {
+      bodyLines.push(line);
+    }
+  }
+
+  // Usuń puste linie na początku i końcu
+  while (bodyLines.length && !bodyLines[0].trim()) bodyLines.shift();
+  while (bodyLines.length && !bodyLines[bodyLines.length-1].trim()) bodyLines.pop();
+
+  return {
+    id: uid(), title, key, harp,
+    text: bodyLines.join('\n'),
+    likes: 0, views: 0, liked: false, capo: '0',
+    order: songs.length + 1
+  };
+}
+
+// ══════════════════════════════════════════════
+//  POMOC
+// ══════════════════════════════════════════════
+function showHelp() {
+  alert(
+`📖 Pomoc — Śpiewnik
+
+💾 EKSPORT (przycisk 💾):
+Zapisuje WSZYSTKIE piosenki do pliku
+spiewnik_DATA.json na Twoim urządzeniu.
+
+📂 IMPORT (przycisk 📂):
+Wgrywa piosenki z pliku .json (wcześniej
+wyeksportowany) lub .txt (jedna piosenka).
+
+🔄 Jak przenieść na inny telefon:
+1. Kliknij 💾 → plik .json zostanie pobrany
+2. Wyślij plik (WhatsApp, email, Dysk Google…)
+3. Na drugim telefonie otwórz Śpiewnik
+4. Kliknij 📂 i wybierz ten plik
+5. Gotowe — wszystkie piosenki są!
+
+📄 Format pliku .txt (jedna piosenka):
+#Tytuł: Nazwa Piosenki
+#T: C
+#H: G
+Tekst piosenki...
+
+🎸 Akordy w tekście:
+Wpisuj w nawiasach: [Am] Tekst [C] tekst [G]`
+  );
+}
+
+// ══════════════════════════════════════════════
+//  TOAST
+// ══════════════════════════════════════════════
+let toastTimer;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+// ══════════════════════════════════════════════
+//  KEYBOARD SHORTCUTS
+// ══════════════════════════════════════════════
+document.addEventListener('keydown', e => {
+  if (document.getElementById('song-view').classList.contains('active')) {
+    if (e.key === '+' || e.key === '=') changeFont(3);
+    if (e.key === '-') changeFont(-3);
+    if (e.key === 'Escape') goBack();
+    if (e.key === 'F11') { e.preventDefault(); toggleFullscreen(); }
+  }
+  if (e.key === 'Escape' && document.getElementById('add-modal').classList.contains('open')) {
+    closeModal();
+  }
+});
+
+// ══════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════
+applyFontSize();
+renderList();
+</script>
+</body>
+</html>
